@@ -8,10 +8,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static localsearch.GraphicHelper.dist;
 import static localsearch.GraphicHelper.getMajorityColour;
+import static localsearch.GraphicHelper.mixColour;
 
 public class LocalSearch {
 
-    private final static int CIRCLE_COUNT = 1000;
+    private final static int CIRCLE_COUNT = 2000;
     private final static int PERTURBATION_MAX_CHANGE = 5;   // in percentage
     private static int width;
     private static int height;
@@ -29,7 +30,7 @@ public class LocalSearch {
         BufferedImage inputImage = ImageIO.read(new File(inputFileName));
         width = inputImage.getWidth();
         height = inputImage.getHeight();
-        maxDiameter = Math.min(width, height) / 16;
+        maxDiameter = Math.min(width, height) / 20;
 
         // do the magics
         BufferedImage outputImage = compress(inputImage);
@@ -43,15 +44,18 @@ public class LocalSearch {
         BufferedImage outputImage = new BufferedImage(width, height, inputImage.getType());
 
         // initialize the circles
-        for (int i = 0; i < CIRCLE_COUNT; ++i) {
+        int circleCount = 0;
+        while (circleCount < CIRCLE_COUNT) {
             ThreadLocalRandom random = ThreadLocalRandom.current();
             int centerX = random.nextInt(width);
             int centerY = random.nextInt(height);
             int diameter = random.nextInt(maxDiameter);
-            circles[i] = drawCircle(inputImage, outputImage, centerX, centerY, diameter);
+            int majorityColour = getMajorityColour(inputImage, centerX, centerY, diameter);
+            Circle circle = new Circle(centerX, centerY, diameter, majorityColour);
+            if (calculateFitnessChange(inputImage, outputImage, circle) > 0) {
+                circles[circleCount++] = drawCircle(inputImage, outputImage, circle);
+            }
         }
-
-        perturb(inputImage, outputImage);
 
         return outputImage;
     }
@@ -75,6 +79,24 @@ public class LocalSearch {
             }
         }
         return new Circle(centerX, centerY, diameter, majorityColour);
+    }
+
+    private static Circle drawCircle(BufferedImage inputImage, BufferedImage outputImage, Circle circle) {
+        int lowerBoundX = Math.max(0, circle.getX() - circle.getDiameter());
+        int upperBoundX = Math.min(width, circle.getX() + circle.getDiameter());
+        int lowerBoundY = Math.max(0, circle.getY() - circle.getDiameter());
+        int upperBoundY = Math.min(height, circle.getY() + circle.getDiameter());
+        for (int i = lowerBoundX; i < upperBoundX; ++i) {
+            for (int j = lowerBoundY; j < upperBoundY; ++j) {
+                // is the pixel within the circle?
+                if (dist(i, j, circle.getX(), circle.getY()) > circle.getDiameter()) {
+                    continue;
+                }
+                // TODO calculate color based on majority in inputImage and current in outputImage
+                outputImage.setRGB(i, j, circle.getColour());
+            }
+        }
+        return circle;
     }
 
     private static void perturb(BufferedImage inputImage, BufferedImage outputImage) {
@@ -104,11 +126,39 @@ public class LocalSearch {
         int fitness = 0;
         for (int i = 0; i < width; ++i) {
             for (int j = 0; j < height; ++j) {
-                // TODO scale the difference
+                // TODO scale the difference?
                 int inputRGB = inputImage.getRGB(i, j);
-                // TODO implement diff
+                int outputRGB = outputImage.getRGB(i, j);
+                fitness += Math.abs(inputRGB - outputRGB);
+                assert fitness >= 0;
             }
         }
         return fitness;
+    }
+
+    private static long calculateFitnessChange(BufferedImage inputImage, BufferedImage outputImage, Circle circle) {
+        long oldFitness = 0;
+        long newFitness = 0;
+        int lowerBoundX = Math.max(0, circle.getX() - circle.getDiameter());
+        int upperBoundX = Math.min(width, circle.getX() + circle.getDiameter());
+        int lowerBoundY = Math.max(0, circle.getY() - circle.getDiameter());
+        int upperBoundY = Math.min(width, circle.getY() + circle.getDiameter());
+        for (int i = lowerBoundX; i < upperBoundX; ++i) {
+            for (int j = lowerBoundY; j < upperBoundY; ++j) {
+                // TODO scale the difference?
+                int inputRGB = inputImage.getRGB(i, j) & 0x00ffffff;
+                assert (inputRGB & 0xff000000) >>> 24 == 0xff;
+                int outputRGB = outputImage.getRGB(i, j) & 0x00ffffff;
+                assert (outputRGB & 0xff000000) >>> 24 == 0xff;
+                oldFitness += Math.abs(inputRGB - outputRGB);
+                assert oldFitness >= 0;
+
+                int newOutputRGB = mixColour(outputRGB, circle.getColour());
+                assert (newOutputRGB & 0xff000000) >>> 24 == 0xff;
+                newFitness += Math.abs(inputRGB - newOutputRGB);
+                assert newFitness >= 0;
+            }
+        }
+        return newFitness - oldFitness;
     }
 }

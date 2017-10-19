@@ -20,7 +20,7 @@ public final class GraphicHelper {
         int red = (getRed(colour1) + getRed(colour2)) / 2;
         int green = (getGreen(colour1) + getGreen(colour2)) / 2;
         int blue = (getBlue(colour1) + getBlue(colour2)) / 2;
-        return ((((red << 8) + green) << 8) + blue) << 8;
+        return (0xff << 24) + (red << 16) + (green << 8) + blue;
     }
 
     /**
@@ -30,7 +30,7 @@ public final class GraphicHelper {
      * @return value of red part (0-255)
      */
     public static int getRed(int colour) {
-        return (colour & 0xFF000000) >> 24;
+        return (colour & 0xff0000) >> 16;
     }
 
     /**
@@ -40,7 +40,7 @@ public final class GraphicHelper {
      * @return value of green part (0-255)
      */
     public static int getGreen(int colour) {
-        return (colour & 0x00FF0000) >> 16;
+        return (colour & 0xff00) >> 8;
     }
 
     /**
@@ -50,7 +50,7 @@ public final class GraphicHelper {
      * @return value of blue part (0-255)
      */
     public static int getBlue(int colour) {
-        return (colour & 0x0000FF00) >> 8;
+        return colour & 0xff;
     }
 
     /**
