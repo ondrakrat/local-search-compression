@@ -34,7 +34,7 @@ public class LocalSearch {
         BufferedImage outputImage = compress(inputImage);
 
         // write the magics
-        ImageIO.write(outputImage, "bmp", new File(outputFileName));
+        ImageIO.write(outputImage, "jpeg", new File(outputFileName));
     }
 
     public static BufferedImage compress(BufferedImage inputImage) {
