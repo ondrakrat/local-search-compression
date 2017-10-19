@@ -6,12 +6,17 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static localsearch.GraphicHelper.dist;
+import static localsearch.GraphicHelper.getMajorityColour;
+
 public class LocalSearch {
 
-    private final static int CIRCLE_COUNT = 100;
+    private final static int CIRCLE_COUNT = 1000;
+    private final static int PERTURBATION_MAX_CHANGE = 5;   // in percentage
     private static int width;
     private static int height;
-    private static int maxDiameter; // TODO is int ok?
+    private static int maxDiameter;
+    private static Circle[] circles = new Circle[CIRCLE_COUNT];
 
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
@@ -24,7 +29,7 @@ public class LocalSearch {
         BufferedImage inputImage = ImageIO.read(new File(inputFileName));
         width = inputImage.getWidth();
         height = inputImage.getHeight();
-        maxDiameter = Math.min(width, height) / 2;
+        maxDiameter = Math.min(width, height) / 16;
 
         // do the magics
         BufferedImage outputImage = compress(inputImage);
@@ -43,22 +48,15 @@ public class LocalSearch {
             int centerX = random.nextInt(width);
             int centerY = random.nextInt(height);
             int diameter = random.nextInt(maxDiameter);
-            drawCircle(inputImage, outputImage, centerX, centerY, diameter);
+            circles[i] = drawCircle(inputImage, outputImage, centerX, centerY, diameter);
         }
+
+        perturb(inputImage, outputImage);
 
         return outputImage;
     }
 
-    public static double dist(int x1, int y1, int x2, int y2) {
-        return Math.abs(Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2)));
-    }
-
-    public static int getMajorityColour(BufferedImage image, int centerX, int centerY, int diameter) {
-        // TODO find majority colour in inputImage, now just returns random colour
-        return (int) (Math.random() * 0x1000000);
-    }
-
-    private static void drawCircle(BufferedImage inputImage, BufferedImage outputImage,
+    private static Circle drawCircle(BufferedImage inputImage, BufferedImage outputImage,
                                    int centerX, int centerY, int diameter) {
         int majorityColour = getMajorityColour(inputImage, centerX, centerY, diameter);
         // iterate only in in circumscribed square
@@ -76,5 +74,41 @@ public class LocalSearch {
                 outputImage.setRGB(i, j, majorityColour);
             }
         }
+        return new Circle(centerX, centerY, diameter, majorityColour);
+    }
+
+    private static void perturb(BufferedImage inputImage, BufferedImage outputImage) {
+        for (Circle circle : circles) {
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            int currentFitness = calculateFitness(inputImage, outputImage);
+            // try improving the position
+            int originalX = circle.getX();
+            int originalY = circle.getY();
+            circle.setX(random.nextInt(originalX));
+            circle.setY(random.nextInt(originalY));
+            int newFitness = calculateFitness(inputImage, outputImage);
+            if (newFitness > currentFitness) {
+                currentFitness = newFitness;
+            } else {
+                circle.setX(originalX);
+                circle.setY(originalY);
+            }
+
+            // try improving the diameter
+
+            // try improving the colour
+        }
+    }
+
+    private static int calculateFitness(BufferedImage inputImage, BufferedImage outputImage) {
+        int fitness = 0;
+        for (int i = 0; i < width; ++i) {
+            for (int j = 0; j < height; ++j) {
+                // TODO scale the difference
+                int inputRGB = inputImage.getRGB(i, j);
+                // TODO implement diff
+            }
+        }
+        return fitness;
     }
 }
