@@ -12,8 +12,7 @@ import static localsearch.GraphicHelper.mixColour;
 
 public class LocalSearch {
 
-    private final static int CIRCLE_COUNT = 2000;
-    private final static int PERTURBATION_MAX_CHANGE = 5;   // in percentage
+    private final static int CIRCLE_COUNT = 13000;
     private static int width;
     private static int height;
     private static int maxDiameter;
@@ -30,7 +29,6 @@ public class LocalSearch {
         BufferedImage inputImage = ImageIO.read(new File(inputFileName));
         width = inputImage.getWidth();
         height = inputImage.getHeight();
-        maxDiameter = Math.min(width, height) / 20;
 
         // do the magics
         BufferedImage outputImage = compress(inputImage);
@@ -46,6 +44,7 @@ public class LocalSearch {
         // initialize the circles
         int circleCount = 0;
         while (circleCount < CIRCLE_COUNT) {
+            updateBoundaries(circleCount);
             ThreadLocalRandom random = ThreadLocalRandom.current();
             int centerX = random.nextInt(width);
             int centerY = random.nextInt(height);
@@ -60,8 +59,30 @@ public class LocalSearch {
         return outputImage;
     }
 
+    /**
+     * Used for non-linear distribution of the diameter of the circles. In the early stages of the algorithm, we
+     * want to generate large circles, whereas in the later stages, we want only small ones.
+     *
+     * @param iteration current iteration of the hill climbing algorithm
+     */
+    private static void updateBoundaries(int iteration) {
+        double percentageDone = (iteration / (double) CIRCLE_COUNT) * 100;
+        // TODO: dynamically set the constant for max diameter, HAS to correlate with width/height!
+        if (percentageDone < 10) {
+            maxDiameter = Math.min(width, height) / 16;
+        } else if (percentageDone < 25) {
+            maxDiameter = Math.min(width, height) / 32;
+        } else if (percentageDone < 50) {
+            maxDiameter = Math.min(width, height) / 48;
+        } else if (percentageDone < 75) {
+            maxDiameter = Math.min(width, height) / 56;
+        } else {
+            maxDiameter = Math.min(width, height) / 64;
+        }
+    }
+
     private static Circle drawCircle(BufferedImage inputImage, BufferedImage outputImage,
-                                   int centerX, int centerY, int diameter) {
+                                     int centerX, int centerY, int diameter) {
         int majorityColour = getMajorityColour(inputImage, centerX, centerY, diameter);
         // iterate only in in circumscribed square
         int lowerBoundX = Math.max(0, centerX - diameter);
@@ -142,7 +163,7 @@ public class LocalSearch {
         int lowerBoundX = Math.max(0, circle.getX() - circle.getDiameter());
         int upperBoundX = Math.min(width, circle.getX() + circle.getDiameter());
         int lowerBoundY = Math.max(0, circle.getY() - circle.getDiameter());
-        int upperBoundY = Math.min(width, circle.getY() + circle.getDiameter());
+        int upperBoundY = Math.min(height, circle.getY() + circle.getDiameter());
         for (int i = lowerBoundX; i < upperBoundX; ++i) {
             for (int j = lowerBoundY; j < upperBoundY; ++j) {
                 // TODO scale the difference?
