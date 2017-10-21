@@ -12,11 +12,14 @@ import static localsearch.GraphicHelper.mixColour;
 
 public class LocalSearch {
 
-    private final static int CIRCLE_COUNT = 13000;
+    private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.HIGH;
+    private final static int CIRCLE_PLACEMENT_RETRY_COUNT = 50;
+    private static int circleCount;
     private static int width;
     private static int height;
     private static int maxDiameter;
-    private static Circle[] circles = new Circle[CIRCLE_COUNT];
+    // array containing information about the rendered circles. Can be used for vector reconstruction of the image.
+    private static Circle[] circles;
 
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
@@ -29,9 +32,14 @@ public class LocalSearch {
         BufferedImage inputImage = ImageIO.read(new File(inputFileName));
         width = inputImage.getWidth();
         height = inputImage.getHeight();
+        circleCount = (width * height) / COMPRESSION_QUALITY.getFactor();
+        circles = new Circle[circleCount];
 
         // do the magics
+        long startTime = System.currentTimeMillis();
         BufferedImage outputImage = compress(inputImage);
+        System.out.println(String.format("Compression time: %d ms, quality: %s",
+                (System.currentTimeMillis() - startTime), COMPRESSION_QUALITY.name()));
 
         // write the magics
         ImageIO.write(outputImage, "jpeg", new File(outputFileName));
@@ -43,7 +51,8 @@ public class LocalSearch {
 
         // initialize the circles
         int circleCount = 0;
-        while (circleCount < CIRCLE_COUNT) {
+        int retries = 0;
+        while (circleCount < LocalSearch.circleCount) {
             updateBoundaries(circleCount);
             ThreadLocalRandom random = ThreadLocalRandom.current();
             int centerX = random.nextInt(width);
@@ -51,8 +60,17 @@ public class LocalSearch {
             int diameter = random.nextInt(maxDiameter);
             int majorityColour = getMajorityColour(inputImage, centerX, centerY, diameter);
             Circle circle = new Circle(centerX, centerY, diameter, majorityColour);
-            if (calculateFitnessChange(inputImage, outputImage, circle) > 0) {
+            // TODO what to do when retry count is reached?
+            if (calculateFitnessChange(inputImage, outputImage, circle) > 0 ||
+                    retries > CIRCLE_PLACEMENT_RETRY_COUNT) {
+                if (retries > CIRCLE_PLACEMENT_RETRY_COUNT) {
+                    System.out.println("Retry count reached. Circles placed: " + circleCount);
+                }
                 circles[circleCount++] = drawCircle(inputImage, outputImage, circle);
+                retries = 0;
+            } else {
+                ++retries;
+                continue;
             }
         }
 
@@ -66,40 +84,15 @@ public class LocalSearch {
      * @param iteration current iteration of the hill climbing algorithm
      */
     private static void updateBoundaries(int iteration) {
-        double percentageDone = (iteration / (double) CIRCLE_COUNT) * 100;
-        // TODO: dynamically set the constant for max diameter, HAS to correlate with width/height!
-        if (percentageDone < 10) {
-            maxDiameter = Math.min(width, height) / 16;
-        } else if (percentageDone < 25) {
-            maxDiameter = Math.min(width, height) / 32;
-        } else if (percentageDone < 50) {
-            maxDiameter = Math.min(width, height) / 48;
-        } else if (percentageDone < 75) {
-            maxDiameter = Math.min(width, height) / 56;
+        double percentageDone = (iteration / (double) circleCount) * 100;
+        int minDimension = Math.min(width, height);
+        if (percentageDone < 25) {
+            maxDiameter = (int) ((minDimension / (16 * (minDimension / 100))) * COMPRESSION_QUALITY.getDiameterFactor());
+        } else if (percentageDone > 75) {
+            maxDiameter = (int) ((minDimension / (48 * (minDimension / 100))) * COMPRESSION_QUALITY.getDiameterFactor());
         } else {
-            maxDiameter = Math.min(width, height) / 64;
+            maxDiameter = (int) ((minDimension / (28 * (minDimension / 100))) * COMPRESSION_QUALITY.getDiameterFactor());
         }
-    }
-
-    private static Circle drawCircle(BufferedImage inputImage, BufferedImage outputImage,
-                                     int centerX, int centerY, int diameter) {
-        int majorityColour = getMajorityColour(inputImage, centerX, centerY, diameter);
-        // iterate only in in circumscribed square
-        int lowerBoundX = Math.max(0, centerX - diameter);
-        int upperBoundX = Math.min(width, centerX + diameter);
-        int lowerBoundY = Math.max(0, centerY - diameter);
-        int upperBoundY = Math.min(height, centerY + diameter);
-        for (int i = lowerBoundX; i < upperBoundX; ++i) {
-            for (int j = lowerBoundY; j < upperBoundY; ++j) {
-                // is the pixel within the circle?
-                if (dist(i, j, centerX, centerY) > diameter) {
-                    continue;
-                }
-                // TODO calculate color based on majority in inputImage and current in outputImage
-                outputImage.setRGB(i, j, majorityColour);
-            }
-        }
-        return new Circle(centerX, centerY, diameter, majorityColour);
     }
 
     private static Circle drawCircle(BufferedImage inputImage, BufferedImage outputImage, Circle circle) {
@@ -114,47 +107,11 @@ public class LocalSearch {
                     continue;
                 }
                 // TODO calculate color based on majority in inputImage and current in outputImage
-                outputImage.setRGB(i, j, circle.getColour());
+                int newColour = mixColour(outputImage.getRGB(i, j), circle.getColour());
+                outputImage.setRGB(i, j, newColour);
             }
         }
         return circle;
-    }
-
-    private static void perturb(BufferedImage inputImage, BufferedImage outputImage) {
-        for (Circle circle : circles) {
-            ThreadLocalRandom random = ThreadLocalRandom.current();
-            int currentFitness = calculateFitness(inputImage, outputImage);
-            // try improving the position
-            int originalX = circle.getX();
-            int originalY = circle.getY();
-            circle.setX(random.nextInt(originalX));
-            circle.setY(random.nextInt(originalY));
-            int newFitness = calculateFitness(inputImage, outputImage);
-            if (newFitness > currentFitness) {
-                currentFitness = newFitness;
-            } else {
-                circle.setX(originalX);
-                circle.setY(originalY);
-            }
-
-            // try improving the diameter
-
-            // try improving the colour
-        }
-    }
-
-    private static int calculateFitness(BufferedImage inputImage, BufferedImage outputImage) {
-        int fitness = 0;
-        for (int i = 0; i < width; ++i) {
-            for (int j = 0; j < height; ++j) {
-                // TODO scale the difference?
-                int inputRGB = inputImage.getRGB(i, j);
-                int outputRGB = outputImage.getRGB(i, j);
-                fitness += Math.abs(inputRGB - outputRGB);
-                assert fitness >= 0;
-            }
-        }
-        return fitness;
     }
 
     private static long calculateFitnessChange(BufferedImage inputImage, BufferedImage outputImage, Circle circle) {
