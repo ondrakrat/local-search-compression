@@ -6,9 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static localsearch.GraphicHelper.dist;
-import static localsearch.GraphicHelper.getMajorityColour;
-import static localsearch.GraphicHelper.mixColour;
+import static localsearch.GraphicHelper.*;
 
 public class LocalSearch {
 
@@ -58,7 +56,7 @@ public class LocalSearch {
             int centerX = random.nextInt(width);
             int centerY = random.nextInt(height);
             int diameter = random.nextInt(maxDiameter);
-            int majorityColour = getMajorityColour(inputImage, centerX, centerY, diameter);
+            int majorityColour = getDominantColour(inputImage, centerX, centerY, diameter);
             Circle circle = new Circle(centerX, centerY, diameter, majorityColour);
             // TODO what to do when retry count is reached?
             if (calculateFitnessChange(inputImage, outputImage, circle) > 0 ||

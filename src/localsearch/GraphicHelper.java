@@ -1,6 +1,13 @@
 package localsearch;
 
+import de.androidpit.colorthief.ColorThief;
+
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Class including static helper methods for graphical operations.
@@ -68,7 +75,8 @@ public final class GraphicHelper {
 
     /**
      * Get the most frequent colour in given {@link BufferedImage} in the circle with center in coordinates
-     * [{@code centerX}, {@code centerY}] and with given {@code diameter}.
+     * [{@code centerX}, {@code centerY}] and with given {@code diameter}. With this implementation, counts
+     * occurrences of the exact pixels.
      *
      * @param image source image
      * @param centerX x coordinate of the center of the circle
@@ -77,7 +85,64 @@ public final class GraphicHelper {
      * @return most frequent colour in the area of the circle
      */
     public static int getMajorityColour(BufferedImage image, int centerX, int centerY, int diameter) {
-        // TODO find majority colour in inputImage instead of colour of the center
-        return image.getRGB(centerX, centerY);
+        if (diameter == 0) {
+            return image.getRGB(centerX, centerY);
+        }
+        // TODO extract circle iteration into separate function
+        Map<Integer, Integer> colourFrequency = new LinkedHashMap<>();
+        int lowerBoundX = Math.max(0, centerX - diameter);
+        int upperBoundX = Math.min(image.getWidth(), centerX + diameter);
+        int lowerBoundY = Math.max(0, centerY - diameter);
+        int upperBoundY = Math.min(image.getHeight(), centerY + diameter);
+        for (int i = lowerBoundX; i < upperBoundX; ++i) {
+            for (int j = lowerBoundY; j < upperBoundY; ++j) {
+                if (dist(i, j, centerX, centerY) > diameter) {
+                    continue;
+                } else {
+                    int pixelColour = image.getRGB(i, j);
+                    colourFrequency.compute(pixelColour, (colour, frequency) -> frequency == null ? 1 : (frequency + 1));
+                }
+            }
+        }
+        return colourFrequency.entrySet().stream()
+                .sorted(Map.Entry.<Integer, Integer>comparingByValue().reversed())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No colours found in the circle"))
+                .getKey();
+    }
+
+    /**
+     * Get the dominant colour of the section of the image using {@code Color Thief} library. This effectively picks
+     * the dominant colour from the (section of the) image. At this moment, selects the most dominant colour from
+     * the <strong>circumscribed square</strong> around the circle.
+     *
+     * @param image source image
+     * @param centerX x coordinate of the center of the circle
+     * @param centerY y coordinate of the center of the circle
+     * @param diameter diameter of the circle
+     * @return most dominant colour in the area of the circle
+     */
+    public static int getDominantColour(BufferedImage image, int centerX, int centerY, int diameter) {
+        if (diameter == 0) {
+            return image.getRGB(centerX, centerY);
+        }
+//        if (centerX - diameter >= image.getWidth()) {
+//            int width = image.getWidth() - centerX;
+//        }
+        int width = Math.min(diameter * 2, image.getWidth() - centerX);
+        int height = Math.min(diameter * 2, image.getHeight() - centerY);
+        BufferedImage square = image.getSubimage(
+                Math.min(0, centerX - diameter),
+                Math.max(image.getHeight(), centerY + diameter),
+                width,
+                height);
+        BufferedImage croppedImage = new BufferedImage(
+                image.getColorModel(),
+                image.getRaster().createCompatibleWritableRaster(width, height),
+                image.isAlphaPremultiplied(),
+                null);
+        square.copyData(croppedImage.getRaster());
+        int[] rgb = ColorThief.getColor(croppedImage);
+        return (0xff << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2];
     }
 }
