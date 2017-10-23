@@ -9,6 +9,36 @@ import java.util.concurrent.ThreadLocalRandom;
 import static localsearch.GraphicHelper.dist;
 import static localsearch.GraphicHelper.mixColour;
 
+/**
+ * Usage: provide input and output file name as a command line parameters.
+ *
+ * Additional configuration can be done by altering the following static variables:
+ * <ul>
+ *     <li>
+ *         {@link LocalSearch#COMPRESSION_QUALITY} for changing the quality of the output image (amount of circles)
+ *     </li>
+ *     <li>
+ *         {@link LocalSearch#CIRCLE_PLACEMENT_RETRY_COUNT} for changing the amount of tries when placing new circles
+ *     </li>
+ *     <li>
+ *         {@link LocalSearch#COLOUR_PICKING_STRATEGY} for changing the strategy of choosing the colour for the new
+ *         circles
+ *         <ul>
+ *             <li>
+ *                 {@link GraphicHelper#getMajorityColour(BufferedImage, int, int, int)} for choosing the most
+ *                 frequent colour in the circumscribed square around the circle in the original image
+ *             </li>
+ *             <li>
+ *                 {@link GraphicHelper#getDominantColour(BufferedImage, int, int, int)} for choosing the dominant
+ *                 colour (see <a href="https://github.com/SvenWoltmann/color-thief-java">Color Thief</a> library)
+ *             </li>
+ *             <li>
+ *                 Any other custom implementation
+ *             </li>
+ *         </ul>
+ *     </li>
+ * </ul>
+ */
 public class LocalSearch {
 
     private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.HIGH;
