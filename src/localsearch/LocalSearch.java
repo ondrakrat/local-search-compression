@@ -6,12 +6,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static localsearch.GraphicHelper.*;
+import static localsearch.GraphicHelper.dist;
+import static localsearch.GraphicHelper.mixColour;
 
 public class LocalSearch {
 
     private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.HIGH;
     private final static int CIRCLE_PLACEMENT_RETRY_COUNT = 50;
+    private final static TetraFunction<BufferedImage, Integer, Integer, Integer, Integer> COLOUR_PICKING_STRATEGY =
+            GraphicHelper::getMajorityColour;
     private static int circleCount;
     private static int width;
     private static int height;
@@ -56,7 +59,7 @@ public class LocalSearch {
             int centerX = random.nextInt(width);
             int centerY = random.nextInt(height);
             int diameter = random.nextInt(maxDiameter);
-            int majorityColour = getDominantColour(inputImage, centerX, centerY, diameter);
+            int majorityColour = COLOUR_PICKING_STRATEGY.apply(inputImage, centerX, centerY, diameter);
             Circle circle = new Circle(centerX, centerY, diameter, majorityColour);
             // TODO what to do when retry count is reached?
             if (calculateFitnessChange(inputImage, outputImage, circle) > 0 ||

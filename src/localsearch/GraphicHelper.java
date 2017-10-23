@@ -126,14 +126,25 @@ public final class GraphicHelper {
         if (diameter == 0) {
             return image.getRGB(centerX, centerY);
         }
-//        if (centerX - diameter >= image.getWidth()) {
-//            int width = image.getWidth() - centerX;
-//        }
-        int width = Math.min(diameter * 2, image.getWidth() - centerX);
-        int height = Math.min(diameter * 2, image.getHeight() - centerY);
+        int width;
+        if (centerX + diameter > image.getWidth()) {    // right overflow
+            width = diameter + image.getWidth() - centerX;
+        } else if (centerX - diameter < 0) {  // left overflow
+            width = diameter + centerX;
+        } else {
+            width = 2 * diameter;
+        }
+        int height;
+        if (centerY - diameter < 0) {   // bottom overflow
+            height = diameter + centerY;
+        } else if (centerY + diameter > image.getHeight()) {  // top overflow
+            height = diameter + image.getHeight() - centerY;
+        } else {
+            height = 2 * diameter;
+        }
         BufferedImage square = image.getSubimage(
-                Math.min(0, centerX - diameter),
-                Math.max(image.getHeight(), centerY + diameter),
+                Math.max(0, centerX - diameter),
+                Math.max(0, centerY - diameter),
                 width,
                 height);
         BufferedImage croppedImage = new BufferedImage(
