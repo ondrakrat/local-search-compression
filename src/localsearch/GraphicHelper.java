@@ -61,6 +61,16 @@ public final class GraphicHelper {
     }
 
     /**
+     * Extract the alpha channel from given colour.
+     *
+     * @param colour colour
+     * @return value of alpha channel (0-255)
+     */
+    public static int getAlpha(int colour) {
+        return (colour & 0xff000000) >>> 24;
+    }
+
+    /**
      * Calculate the distance between two points.
      *
      * @param x1 x coordinate of first point

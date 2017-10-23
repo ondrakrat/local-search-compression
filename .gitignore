@@ -3,3 +3,5 @@
 *.iml
 out
 out.*
+data.txt
+local-search-compression.tar.gz

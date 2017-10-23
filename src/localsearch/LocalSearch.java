@@ -1,13 +1,12 @@
 package localsearch;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static localsearch.GraphicHelper.dist;
-import static localsearch.GraphicHelper.mixColour;
+import static localsearch.GraphicHelper.*;
 
 /**
  * Usage: provide input and output file name as a command line parameters.
@@ -45,6 +44,7 @@ public class LocalSearch {
     private final static int CIRCLE_PLACEMENT_RETRY_COUNT = 50;
     private final static TetraFunction<BufferedImage, Integer, Integer, Integer, Integer> COLOUR_PICKING_STRATEGY =
             GraphicHelper::getMajorityColour;
+    private final static String OUTPUT_FILE_NAME = "data.txt";
     private static int circleCount;
     private static int width;
     private static int height;
@@ -74,6 +74,7 @@ public class LocalSearch {
 
         // write the magics
         ImageIO.write(outputImage, "jpeg", new File(outputFileName));
+        createOutputFile(outputFileName);
     }
 
     public static BufferedImage compress(BufferedImage inputImage) {
@@ -169,5 +170,36 @@ public class LocalSearch {
             }
         }
         return newFitness - oldFitness;
+    }
+
+    private static void createOutputFile(String imageOutputFileName) {
+        String fileName = imageOutputFileName.substring(0, imageOutputFileName.lastIndexOf('/')) + "/" +
+                OUTPUT_FILE_NAME;
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
+            writer.write(width + " " + height); // width height
+            writer.newLine();
+            writer.write(Integer.toString(circles.length));   // amount of circles
+            writer.newLine();
+            writer.write("0 0 0");  // background colour
+            writer.newLine();
+            writer.newLine();
+            for (Circle circle : circles) {
+                // for each circle write its attributes (order of circles is reflected)
+                // XcoordOfCenter,YcoordOfCenter,diameter,R G B A
+                writer.write(String.format("%d,%d,%d,%s",
+                        circle.getX(),
+                        circle.getY(),
+                        circle.getDiameter(),
+                        String.format("%d %d %d %d",
+                                getRed(circle.getColour()),
+                                getGreen(circle.getColour()),
+                                getBlue(circle.getColour()),
+                                getAlpha(circle.getColour())
+                                )));
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
