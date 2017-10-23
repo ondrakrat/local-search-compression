@@ -11,7 +11,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import static localsearch.GraphicHelper.*;
 
 /**
- * Usage: provide input and output file name as a command line parameters.
+ * Usage: provide input and output file name as a command line parameters. The data file, describing the circles as
+ * specified in {@link LocalSearch#createOutputFile(String)} JavaDoc will be placed into the same folder as output
+ * image with the name {@link LocalSearch#OUTPUT_FILE_NAME}.
  *
  * Additional configuration can be done by altering the following static variables:
  * <ul>
@@ -42,7 +44,7 @@ import static localsearch.GraphicHelper.*;
  */
 public class LocalSearch {
 
-    private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.LOW;
+    private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.HIGH;
     private final static int CIRCLE_PLACEMENT_RETRY_COUNT = 50;
     private final static TetraFunction<BufferedImage, Integer, Integer, Integer, Integer> COLOUR_PICKING_STRATEGY =
             GraphicHelper::getMajorityColour;
