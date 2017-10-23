@@ -1,9 +1,11 @@
 package localsearch;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static localsearch.GraphicHelper.*;
@@ -40,7 +42,7 @@ import static localsearch.GraphicHelper.*;
  */
 public class LocalSearch {
 
-    private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.HIGH;
+    private final static CompressionQuality COMPRESSION_QUALITY = CompressionQuality.LOW;
     private final static int CIRCLE_PLACEMENT_RETRY_COUNT = 50;
     private final static TetraFunction<BufferedImage, Integer, Integer, Integer, Integer> COLOUR_PICKING_STRATEGY =
             GraphicHelper::getMajorityColour;
@@ -138,7 +140,6 @@ public class LocalSearch {
                 if (dist(i, j, circle.getX(), circle.getY()) > circle.getDiameter()) {
                     continue;
                 }
-                // TODO calculate color based on majority in inputImage and current in outputImage
                 int newColour = mixColour(outputImage.getRGB(i, j), circle.getColour());
                 outputImage.setRGB(i, j, newColour);
             }
@@ -172,6 +173,17 @@ public class LocalSearch {
         return newFitness - oldFitness;
     }
 
+    /**
+     * Output file format:
+     * {width} {height}
+     * {amount of circles}
+     * {background colour (RGB}
+     *
+     * [for each circle]
+     * {XcoordOfCenter},{YcoordOfCenter},{diameter},{red} {green} {blue} {alpha}
+     *
+     * @param imageOutputFileName name of the image output file
+     */
     private static void createOutputFile(String imageOutputFileName) {
         String fileName = imageOutputFileName.substring(0, imageOutputFileName.lastIndexOf('/')) + "/" +
                 OUTPUT_FILE_NAME;
