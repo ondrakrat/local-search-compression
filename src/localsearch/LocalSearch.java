@@ -40,6 +40,10 @@ import static localsearch.GraphicHelper.*;
  *             </li>
  *         </ul>
  *     </li>
+ *     <li>
+ *         {@link LocalSearch#VISUALIZATION} set to {@code true} if you want to watch the steps of the algorithm.
+ *         Might take a long time on large images on high quality.
+ *     </li>
  * </ul>
  */
 public class LocalSearch {
@@ -49,6 +53,8 @@ public class LocalSearch {
     private final static TetraFunction<BufferedImage, Integer, Integer, Integer, Integer> COLOUR_PICKING_STRATEGY =
             GraphicHelper::getMajorityColour;
     private final static String OUTPUT_FILE_NAME = "data.txt";
+    private final static boolean VISUALIZATION = true;
+    private static Gui gui;
     private static int circleCount;
     private static int width;
     private static int height;
@@ -75,6 +81,9 @@ public class LocalSearch {
         BufferedImage outputImage = compress(inputImage);
         System.out.println(String.format("Compression time: %d ms, quality: %s",
                 (System.currentTimeMillis() - startTime), COMPRESSION_QUALITY.name()));
+        if (VISUALIZATION) {
+            gui.finish();
+        }
 
         // write the magics
         ImageIO.write(outputImage, "jpeg", new File(outputFileName));
@@ -84,6 +93,12 @@ public class LocalSearch {
     public static BufferedImage compress(BufferedImage inputImage) {
         // create a black copy of the input image
         BufferedImage outputImage = new BufferedImage(width, height, inputImage.getType());
+
+        // start gui
+        if (VISUALIZATION) {
+            gui = new Gui();
+            gui.start(width, height, outputImage);
+        }
 
         // initialize the circles
         int circleCount = 0;
@@ -104,6 +119,14 @@ public class LocalSearch {
                 }
                 circles[circleCount++] = drawCircle(inputImage, outputImage, circle);
                 retries = 0;
+                if (VISUALIZATION) {
+                    gui.update();
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             } else {
                 ++retries;
                 continue;
